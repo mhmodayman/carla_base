@@ -35,6 +35,7 @@ class GlobalRoutePlanner(object):
         self._road_id_to_edge = None
         self._intersection_end_node = -1
         self._previous_decision = RoadOption.VOID
+        self.setup()
 
     def setup(self):
         """
