@@ -16,6 +16,7 @@ from agents.navigation.local_planner_behavior import LocalPlanner, RoadOption
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 from agents.navigation.types_behavior import Cautious, Aggressive, Normal
+from scenario_runner.srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 
 from agents.tools.misc import get_speed, positive
 
@@ -63,6 +64,7 @@ class BehaviorAgent(Agent):
         self.min_speed = 5
         self.behavior = None
         self._sampling_resolution = 4.5
+        self.forbidden = [carla.LaneType.RoadWorks, carla.LaneType.Any, carla.LaneType.Sidewalk, carla.LaneType.Border]
 
         # Parameters for agent behavior
         if behavior == 'cautious':
@@ -181,7 +183,7 @@ class BehaviorAgent(Agent):
             self.light_id_to_ignore = -1
         return 0
 
-    def _overtake(self, location, waypoint, vehicle_list):
+    def _overtake(self, current_waypoint_xy_cmd, next_waypoint_xy_cmd):
         """
         This method is in charge of overtaking behaviors.
 
@@ -189,30 +191,31 @@ class BehaviorAgent(Agent):
             :param waypoint: current waypoint of the agent
             :param vehicle_list: list of all the nearby vehicles
         """
+        # current_waypoint_xy, current_cmd = current_waypoint_xy_cmd
+        # current_waypoint = CarlaDataProvider.get_map().get_waypoint(carla.Location(x=current_waypoint_xy[1], y=-current_waypoint_xy[0], z=0.0))
 
-        left_turn = waypoint.left_lane_marking.lane_change
-        right_turn = waypoint.right_lane_marking.lane_change
+        next_waypoint_xy, next_cmd = next_waypoint_xy_cmd
+        next_waypoint = CarlaDataProvider.get_map().get_waypoint(carla.Location(x=next_waypoint_xy[1], y=-next_waypoint_xy[0], z=0.0))
 
-        left_wpt = waypoint.get_left_lane()
-        right_wpt = waypoint.get_right_lane()
+        left_wpt = next_waypoint.get_left_lane()
+        right_wpt = next_waypoint.get_right_lane()
 
-        if (left_turn == carla.LaneChange.Left or left_turn ==
-                carla.LaneChange.Both) and waypoint.lane_id * left_wpt.lane_id > 0 and left_wpt.lane_type == carla.LaneType.Driving:
-            new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
-                self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=-1)
-            if not new_vehicle_state:
-                print("Overtaking to the left!")
-                self.behavior.overtake_counter = 200
-                self.set_destination(left_wpt.transform.location,
-                                     self.end_waypoint.transform.location, clean=True)
-        elif right_turn == carla.LaneChange.Right and waypoint.lane_id * right_wpt.lane_id > 0 and right_wpt.lane_type == carla.LaneType.Driving:
-            new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
-                self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=1)
-            if not new_vehicle_state:
-                print("Overtaking to the right!")
-                self.behavior.overtake_counter = 200
-                self.set_destination(right_wpt.transform.location,
-                                     self.end_waypoint.transform.location, clean=True)
+        goleft, goright = False, False
+
+        if left_wpt is not None:
+            # if (next_waypoint.lane_id * left_wpt.lane_id > 0) and (left_wpt.lane_type not in self.forbidden):
+            if left_wpt.lane_type not in self.forbidden:
+                # print("Overtaking to the left!")
+                goleft = True
+                return left_wpt, goleft, goright
+        if right_wpt is not None:
+            # if (next_waypoint.lane_id * right_wpt.lane_id > 0) and (right_wpt.lane_type not in self.forbidden):
+            if right_wpt.lane_type not in self.forbidden:
+                # print("Overtaking to the right!")
+                goright = True
+                return right_wpt, goleft, goright
+        else:
+            return None, goleft, goright  # next_waypoint
 
     def _tailgating(self, location, waypoint, vehicle_list):
         """
