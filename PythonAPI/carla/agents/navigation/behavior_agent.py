@@ -206,13 +206,13 @@ class BehaviorAgent(Agent):
             # if (next_waypoint.lane_id * left_wpt.lane_id > 0) and (left_wpt.lane_type not in self.forbidden):
             if left_wpt.lane_type not in self.forbidden:
                 # print("Overtaking to the left!")
-                goleft = True
+                goright = True
                 return left_wpt, goleft, goright
         if right_wpt is not None:
             # if (next_waypoint.lane_id * right_wpt.lane_id > 0) and (right_wpt.lane_type not in self.forbidden):
             if right_wpt.lane_type not in self.forbidden:
                 # print("Overtaking to the right!")
-                goright = True
+                goleft = True
                 return right_wpt, goleft, goright
         else:
             return None, goleft, goright  # next_waypoint
