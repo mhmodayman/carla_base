@@ -347,7 +347,10 @@ class GlobalRoutePlanner(object):
         This method returns list of (carla.Waypoint, RoadOption)
         from origin to destination
         """
-
+        if isinstance(origin, carla.Transform):
+            origin = origin.location
+        if isinstance(destination, carla.Transform):
+            destination = destination.location
         route_trace = []
         route = self._path_search(origin, destination)
         current_waypoint = self._dao.get_waypoint(origin)
